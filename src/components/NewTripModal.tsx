@@ -65,7 +65,7 @@ export default function NewTripModal({ onStart, onSkip }: NewTripModalProps) {
   }
 
   return (
-    <div className='fixed inset-0 z-50 flex items-center justify-center'>
+    <div className='relative flex-1 flex items-center justify-center overflow-y-auto'>
       {/* Background */}
       <div
         className='absolute inset-0 bg-cover bg-center bg-no-repeat'

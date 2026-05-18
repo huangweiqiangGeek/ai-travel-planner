@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import type { Trip, User } from '../types'
 
 const AVATAR_URL =
@@ -12,10 +13,10 @@ interface SidebarProps {
 }
 
 const NAV_ITEMS = [
-  { icon: 'explore', label: 'Exploration', active: true },
-  { icon: 'bookmark', label: 'Saved Places' },
-  { icon: 'map', label: 'Travel Guides' },
-  { icon: 'settings', label: 'Settings' },
+  { icon: 'explore', label: 'Exploration', path: '/' },
+  { icon: 'bookmark', label: 'Saved Places', path: '#' },
+  { icon: 'map', label: 'Travel Guides', path: '#' },
+  { icon: 'settings', label: 'Settings', path: '#' },
 ]
 
 export default function Sidebar({
@@ -54,21 +55,24 @@ export default function Sidebar({
       {/* Nav */}
       <nav className='px-4 mb-6'>
         <ul className='space-y-1'>
-          {NAV_ITEMS.map(({ icon, label, active }) => (
-            <li key={label}>
-              <a
-                href='#'
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  active
-                    ? 'text-[#c3f5ff] font-bold bg-[#16283D]/50'
-                    : 'text-[#bac9cc] hover:bg-[#16283D]/30'
-                }`}
-              >
-                <span className='material-symbols-outlined'>{icon}</span>
-                <span className='text-[15px]'>{label}</span>
-              </a>
-            </li>
-          ))}
+          {NAV_ITEMS.map(({ icon, label, path }) => {
+            const isActive = path === '/' && activeTrip !== ''
+            return (
+              <li key={label}>
+                <Link
+                  to={path}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                    isActive
+                      ? 'text-[#c3f5ff] font-bold bg-[#16283D]/50'
+                      : 'text-[#bac9cc] hover:bg-[#16283D]/30'
+                  }`}
+                >
+                  <span className='material-symbols-outlined'>{icon}</span>
+                  <span className='text-[15px]'>{label}</span>
+                </Link>
+              </li>
+            )
+          })}
         </ul>
       </nav>
 
@@ -80,13 +84,14 @@ export default function Sidebar({
         <ul className='space-y-1'>
           {trips.map(trip => (
             <li key={trip.id}>
-              <button
-                onClick={() => onSelectTrip(trip.id)}
+              <Link
+                to={`/trip/${trip.id}`}
                 className={`w-full text-left px-4 py-2 rounded-lg flex items-center gap-3 transition-colors border-l-[3px] ${
                   trip.id === activeTrip
                     ? 'bg-[#16283D] border-[#00e5ff] text-[#dde3ea]'
                     : 'border-transparent text-[#bac9cc] hover:bg-[#16283D]/50'
                 }`}
+                onClick={() => onSelectTrip(trip.id)}
               >
                 <span
                   className={`material-symbols-outlined text-[18px] ${trip.id === activeTrip ? 'text-[#00e5ff]' : ''}`}
@@ -94,7 +99,7 @@ export default function Sidebar({
                   history
                 </span>
                 <span className='truncate text-[13px]'>{trip.title}</span>
-              </button>
+              </Link>
             </li>
           ))}
         </ul>
