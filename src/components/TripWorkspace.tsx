@@ -101,13 +101,27 @@ export default function TripWorkspace({ trips, setTrips }: TripWorkspaceProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tripId])
 
-  // Send the auto-message once on mount for newly created trips
+  // Send the auto-message once on mount for newly created trips.
+  // NOTE: do NOT clear autoMessageRef before starting the timer — React StrictMode
+  // cancels the timer in its simulated-unmount cleanup, then re-runs the effect.
+  // If the ref is already null at that point the message is never sent.
+  // Clearing inside the callback means the ref is still set for the remount.
   useEffect(() => {
     const autoMsg = autoMessageRef.current
     if (autoMsg && tripId && !tripId.startsWith('local-')) {
-      autoMessageRef.current = null
-      // Defer slightly to ensure component is fully mounted
-      const t = setTimeout(() => handleSend(autoMsg), 0)
+      const t = setTimeout(() => {
+        autoMessageRef.current = null
+        // Clear the navigation state from browser history so a page refresh
+        // does not re-trigger the auto-send (window.history.state persists across refreshes).
+        // React Router stores user state under the `usr` key.
+        try {
+          const hs = window.history.state as Record<string, unknown> | null
+          if (hs) window.history.replaceState({ ...hs, usr: null }, '')
+        } catch {
+          /* ignore in environments without history API */
+        }
+        handleSend(autoMsg)
+      }, 0)
       return () => clearTimeout(t)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

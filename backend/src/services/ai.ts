@@ -4,7 +4,7 @@ import { SYSTEM_PROMPT } from './systemPrompt.ts'
 const client = new OpenAI({
   baseURL: process.env.AI_BASE_URL ?? 'https://api.openai.com/v1',
   apiKey: process.env.AI_API_KEY ?? '',
-  timeout: 120_000,  // high ceiling; real timeout managed by AbortController in streamChat
+  timeout: 600_000,  // 10 min — reasoning models (gpt-5.5 etc.) can take 2-5 min
   maxRetries: 0,
 })
 
@@ -50,23 +50,31 @@ export async function streamChat(
     // If caller deliberately aborted (e.g. client disconnect), ignore the resulting error
     if (signal?.aborted) return
 
-    const isAbortLike =
+    const isTimeout =
       err instanceof Error && (
-        err.name === 'AbortError' ||
         err.name === 'TimeoutError' ||
-        err.name === 'APIUserAbortError' ||
         err.name === 'APIConnectionTimeoutError' ||
-        (err.constructor?.name?.includes('Abort')) ||
-        err.message.toLowerCase().includes('abort') ||
         err.message.toLowerCase().includes('timed out') ||
-        err.message.toLowerCase().includes('timeout') ||
-        // OpenAI SDK wraps aborted undici connections as APIConnectionError("Connection error.")
-        err.message.toLowerCase().includes('connection error')
+        // OpenAI SDK emits "Request timed out" for our client-level timeout
+        err.message.toLowerCase().includes('request timed out')
       )
-    if (isAbortLike) {
-      onError(new Error('AI 响应超时，请重试'))
+    if (isTimeout) {
+      onError(new Error('AI 响应超时，请重试（模型响应过慢，可尝试换用更快的模型）'))
       return
     }
-    onError(err instanceof Error ? err : new Error(String(err)))
+
+    const isClientAbort =
+      err instanceof Error && (
+        err.name === 'AbortError' ||
+        err.name === 'APIUserAbortError' ||
+        (err.constructor?.name?.includes('Abort')) ||
+        err.message.toLowerCase().includes('abort')
+      )
+    if (isClientAbort) return  // deliberate abort, silently ignore
+
+    // For all other errors (API errors, connection errors, model errors, etc.)
+    // surface the real message so it's easier to diagnose
+    const msg = err instanceof Error ? err.message : String(err)
+    onError(new Error(`AI 调用失败：${msg}`))
   }
 }
